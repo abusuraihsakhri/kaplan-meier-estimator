@@ -16,9 +16,7 @@ Pure Python stdlib — no external dependencies.
 
 import math
 import csv
-import json
-import sys
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -57,6 +55,9 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
     for t in times:
         if t < 0:
             raise ValueError("Times must be non-negative")
+    for e in events:
+        if e not in (0, 1):
+            raise ValueError("Events must be 0 (censored) or 1 (event)")
 
     n = len(times)
 
@@ -442,30 +443,6 @@ def _chi2_sf(x: float, df: int) -> float:
 def _norm_cdf(x: float) -> float:
     """Standard normal CDF using error function."""
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2.0)))
-
-
-def _norm_ppf(p: float) -> float:
-    """Inverse standard normal CDF (rational approximation)."""
-    if p <= 0:
-        return float('-inf')
-    if p >= 1:
-        return float('inf')
-    if p == 0.5:
-        return 0.0
-
-    # Rational approximation for the normal quantile function
-    # Abramowitz and Stegun approximation
-    if p < 0.5:
-        return -_rational_approx(math.sqrt(-2.0 * math.log(p)))
-    else:
-        return _rational_approx(math.sqrt(-2.0 * math.log(1.0 - p)))
-
-
-def _rational_approx(t: float) -> float:
-    """Helper for norm_ppf."""
-    c0, c1, c2 = 2.515517, 0.802853, 0.010328
-    d1, d2, d3 = 1.432788, 0.189269, 0.001308
-    return t - (c0 + c1 * t + c2 * t * t) / (1.0 + d1 * t + d2 * t * t + d3 * t * t * t)
 
 
 def _gamma_inc_reg(a: float, x: float) -> float:

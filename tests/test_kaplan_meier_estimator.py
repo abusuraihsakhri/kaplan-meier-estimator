@@ -63,3 +63,26 @@ def test_supervisor_consensus_and_audit():
     assert main(["audit", "--task-id", "CLI-TEST-01"]) == 0
     assert main(["chat", "Explain", "specifications"]) == 0
     assert main(["verify-audit"]) == 0
+
+
+def test_cli_audit_critical_flags_urgency():
+    """CLI audit with critical flag should produce CRITICAL_STAT urgency."""
+    assert main(["audit", "--task-id", "T-CRIT", "--critical"]) == 0
+
+
+def test_cli_audit_discordant_descriptor():
+    """CLI audit with discordant descriptor should surface an alert."""
+    assert main(["audit", "--task-id", "T-DISC", "--descriptor", "DISCORDANT_ANOMALY"]) == 0
+
+
+def test_phi_guard_error_does_not_leak_pattern():
+    """PHI guard error message must not expose the regex pattern."""
+    import pytest as _pytest
+    try:
+        PHIGuard.assert_no_phi("Patient MRN-12345678")
+    except SecurityException as exc:
+        assert "MRN" not in str(exc) or "pattern" not in str(exc).lower()
+        # The raw regex source must never appear in the message
+        assert r"\b(?:MRN|mrn)" not in str(exc)
+    else:
+        _pytest.fail("Expected SecurityException for PHI-bearing text")

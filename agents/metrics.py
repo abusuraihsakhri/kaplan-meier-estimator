@@ -2,7 +2,6 @@
 Prometheus Operational Metrics Exporter for kaplan-meier-estimator.
 """
 import time
-from typing import Dict, Any
 
 class SystemMetricsCollector:
     def __init__(self):

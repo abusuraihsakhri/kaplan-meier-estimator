@@ -103,6 +103,13 @@ class TestKaplanMeierBasic:
         with pytest.raises(ValueError):
             kaplan_meier([-1, 2], [1, 0])
 
+    def test_invalid_event_value_raises(self):
+        """Event values other than 0 or 1 should raise ValueError."""
+        with pytest.raises(ValueError):
+            kaplan_meier([1, 2, 3], [1, 2, 0])
+        with pytest.raises(ValueError):
+            kaplan_meier([1, 2], [1, -1])
+
 
 # ---------------------------------------------------------------------------
 # Median survival

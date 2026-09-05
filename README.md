@@ -74,49 +74,84 @@ dict with keys:
 
 ---
 
-## 📐 Mathematical Formulation & Logic
+## 📐 Mathematical Formulation
 
-```text
-  Actually, simpler formulation:
-  Wait, let me use the standard log-log CI formula:
-  Actually the standard formula is:
-  Hmm, let me use the proper formula.
-  Let me recalculate. The Greenwood variance of S(t) is:
+**Survival function** — product-limit estimator:
+
 ```
+S(t) = ∏(ti ≤ t) (1 - di/ni)
+```
+
+where `di` is the number of events at time `ti` and `ni` is the number at risk just before `ti`.
+
+**Nelson-Aalen cumulative hazard:**
+
+```
+H(t) = Σ(di/ni)
+```
+
+**Greenwood variance of S(t):**
+
+```
+Var(S(t)) = S(t)² · Σ di/(ni·(ni - di))
+```
+
+**Log-log 95% confidence interval** — transform via `g = ln(-ln(S(t)))`, compute `se(g)`, then map back:
+
+```
+CI = exp(-exp(g ± 1.96 · se(g)))
+```
+
+**Log-rank test** — compares two groups using the hypergeometric variance of observed minus expected events across all unique event times, yielding a chi-square statistic (1 df) and signed z-score.
 
 ---
 
 ## 💻 CLI Quickstart & Usage
 
-### 1. Guided Interactive Mode
+The CLI is structured as subcommands:
+
 ```bash
-python cli.py
+# Analyze a single group (table output)
+python cli.py analyze --time 1 2 3 4 5 --event 1 0 1 1 0
+
+# Analyze with JSON output
+python cli.py analyze --time 1 2 3 4 5 --event 1 0 1 1 0 --json
+
+# Log-rank test comparing two groups
+python cli.py compare --time1 1 2 3 4 --event1 1 0 1 1 --time2 2 3 4 5 --event2 0 1 1 0
+
+# Hazard rates at each event time
+python cli.py hazard --time 1 2 3 4 5 --event 1 0 1 1 0
+
+# Batch CSV processing (columns: time, event, [group])
+python cli.py batch --input sample.csv --output results.csv
 ```
 
-### 2. Direct Parameterized Evaluation
-```bash
-python cli.py --time <value> --event <value> --time1 <value> --event1 <value>
-```
-
-### Parameter Reference
-- `--time`: Specifies input measurement or parameter value.
-- `--event`: Specifies input measurement or parameter value.
-- `--time1`: Specifies input measurement or parameter value.
-- `--event1`: Specifies input measurement or parameter value.
-- `--time2`: Specifies input measurement or parameter value.
-- `--event2`: Specifies input measurement or parameter value.
-- `--input`: Specifies input measurement or parameter value.
-- `--output`: Specifies input measurement or parameter value.
-- `---`: Specifies input measurement or parameter value.
-- `--json`: Specifies input measurement or parameter value.
-
-### Input Data Schema
+### CSV Input Schema
 
 | Field | Description | Requirement |
 |:------|:------------|:------------|
-| `time` | Parameter / observation metric | Required |
-| `event` | Parameter / observation metric | Required |
-| `group` | Parameter / observation metric | Required |
+| `time` | Observation time (event or censoring) | Required |
+| `event` | Event indicator: 1 = event, 0 = censored | Required |
+| `group` | Group label for log-rank comparison | Optional |
+
+The `time` and `event` column names are auto-detected (aliases: `survival_time`, `days`, `months`, `status`, `censored`, etc.). When a `group` column is present with exactly two groups, a log-rank test is appended to the output.
+
+### Agent & Audit Commands
+
+```bash
+# Run a supervisor audit task
+python cli.py audit --task-id T1 --primary 29.4 --descriptor DISCORDANT_ANOMALY --critical
+
+# Query the air-gapped reasoning adapter
+python cli.py chat "Explain survival analysis assumptions"
+
+# Verify HMAC-SHA256 audit trail integrity
+python cli.py verify-audit
+
+# Start the FastAPI REST server
+python cli.py serve --host 0.0.0.0 --port 8000
+```
 
 ---
 
@@ -141,7 +176,7 @@ pytest -v
 Execute high-throughput batch simulation benchmarks:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+python simulator.py 1000
 ```
 
 ---
