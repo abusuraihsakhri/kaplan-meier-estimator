@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Kaplan Meier Estimator API",
-    "description": "Enterprise Distributed Component Platform (Clinical & Cryptographic AI) adhering to CAP / CLSI / NIST Standards.",
-    "version": "3.0.0-ENTERPRISE",
+    "description": "Kaplan–Meier survival analysis and demonstration audit endpoints. No authentication is provided.",
+    "version": "3.0.0",
     "contact": {
       "name": "Dr. Abu Suraih Sakhri",
       "url": "https://github.com/abusuraihsakhri"
@@ -22,10 +22,10 @@
     },
     "/metrics": {
       "get": {
-        "summary": "Prometheus operational metrics",
+        "summary": "Read demonstration metrics as JSON",
         "responses": {
           "200": {
-            "description": "Prometheus text metrics"
+            "description": "JSON metrics snapshot"
           }
         }
       }
@@ -76,7 +76,7 @@
     },
     "/api/chat": {
       "post": {
-        "summary": "Air-gapped supervisory conversational assistant",
+        "summary": "Query the deterministic mock supervisory adapter",
         "requestBody": {
           "content": {
             "application/json": {
@@ -107,6 +107,116 @@
         "responses": {
           "200": {
             "description": "Cryptographic audit trail"
+          }
+        }
+      }
+    },
+    "/api/kaplan-meier": {
+      "post": {
+        "summary": "Estimate Kaplan–Meier survival from event times and right-censoring",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "times",
+                  "events"
+                ],
+                "properties": {
+                  "times": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    },
+                    "description": "Finite non-negative observed times"
+                  },
+                  "events": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    },
+                    "description": "1 event, 0 censored"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event-time survival, CI, risk-set and hazard results"
+          },
+          "422": {
+            "description": "Invalid or mismatched observation arrays"
+          }
+        }
+      }
+    },
+    "/api/log-rank": {
+      "post": {
+        "summary": "Compute two-sample log-rank test",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "times1",
+                  "events1",
+                  "times2",
+                  "events2"
+                ],
+                "properties": {
+                  "times1": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "events1": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    }
+                  },
+                  "times2": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "events2": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chi-square statistic, two-sided p-value and signed z-score"
+          },
+          "422": {
+            "description": "Invalid observation arrays"
           }
         }
       }
