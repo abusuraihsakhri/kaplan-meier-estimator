@@ -24,6 +24,11 @@ wheels/
 .installed.cfg
 *.egg
 
+# Local environment files
+.env
+.env.*
+!.env.example
+
 # Virtual environments
 .venv/
 venv/
