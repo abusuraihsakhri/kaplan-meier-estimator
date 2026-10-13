@@ -37,6 +37,9 @@ dev = [
 [project.scripts]
 kaplan-meier = "cli:main"
 
+[tool.setuptools]
+py-modules = ["kaplan_meier", "cli", "enrichment", "simulator"]
+
 [tool.setuptools.packages.find]
 include = ["agents*"]
 
