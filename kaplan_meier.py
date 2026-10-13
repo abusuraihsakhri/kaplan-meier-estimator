@@ -53,10 +53,10 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
     if len(times) == 0:
         raise ValueError("At least one observation is required")
     for t in times:
-        if t < 0:
-            raise ValueError("Times must be non-negative")
+        if isinstance(t, bool) or not isinstance(t, (int, float)) or not math.isfinite(t) or t < 0:
+            raise ValueError("Times must be finite non-negative numbers")
     for e in events:
-        if e not in (0, 1):
+        if isinstance(e, bool) or e not in (0, 1):
             raise ValueError("Events must be 0 (censored) or 1 (event)")
 
     n = len(times)
@@ -86,6 +86,7 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
             "greenwood_var": [],
             "ci_lower": [],
             "ci_upper": [],
+            "ci_hi": [],
             "n_subjects": n,
             "n_events": 0,
             "n_censored": n,
@@ -116,8 +117,6 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
             censor_counts[t] = censor_counts.get(t, 0) + 1
 
     # Process all unique times in order (including censoring-only times for at-risk tracking)
-    all_unique_times = sorted(set(sorted_times))
-
     # We need to track at-risk at each event time
     # First, compute number at risk at each event time
     # n_i = number of subjects with time >= event_time
@@ -127,7 +126,9 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
         # Count at risk: subjects with time >= et
         # (subjects still alive and uncensored just before et)
         # n_i = number of subjects with observed time >= et
-        n_i = sum(1 for t in sorted_times if t >= et)
+        while idx < n and sorted_times[idx] < et:
+            idx += 1
+        n_i = n - idx
 
         d_i = death_counts.get(et, 0)
         c_i = censor_counts.get(et, 0)
@@ -155,32 +156,9 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
         # Using: CI = S(t)^{exp(±z * se(ln(-ln(S(t)))) / ln(S(t)))}
         # where se(ln(-ln(S(t)))) = sqrt(Var(S(t))) / (|ln(S(t))| * S(t))
         z = 1.96  # 95% CI
-        if s > 0 and s < 1:
+        if 0 < s < 1:
             ln_s = math.log(s)
-            se_lnln = math.sqrt(cum_var) / (abs(ln_s) * s) if s > 0 else 0
-            # Actually, simpler formulation:
-            # se(ln(-ln(S))) = sqrt(Σ di/(ni*(ni-di))) / |ln(S)|
-            # Wait, let me use the standard log-log CI formula:
-            # ln(-ln(S(t))) ± z * se(ln(-ln(S(t))))
-            # se(ln(-ln(S(t)))) = sqrt(Σ di/(ni*(ni-di))) / |ln(S(t))|
-            # Actually the standard formula is:
-            # se(ln(-ln(S(t)))) = sqrt(Greenwood_var) / (S(t) * |ln(S(t))|)
-            # But a cleaner approach:
-            # Let g = ln(-ln(S(t)))
-            # se(g) = sqrt(cum_var) / (S(t) * |ln(S(t))|) ... no
-            # Standard: se(g) = sqrt(Σ di/(ni*(ni-di))) / |ln(S(t))|
-            # Hmm, let me use the proper formula.
-            # Variance of ln(-ln(S(t))) = (1/(ln(S(t)))^2) * Σ di/(ni*(ni-di))
-            # So se = sqrt(cum_var) / |ln(S(t))|
-            # Wait, cum_var here is Σ di/(ni*(ni-di)), not the Greenwood variance of S.
-            # Let me recalculate. The Greenwood variance of S(t) is:
-            # Var(S(t)) = S(t)^2 * Σ di/(ni*(ni-di))
-            # The variance of ln(-ln(S(t))) is:
-            # Var(ln(-ln(S(t)))) = (1/(ln(S(t)))^2) * Σ di/(ni*(ni-di))
-            # = Var(S(t)) / (S(t)^2 * (ln(S(t)))^2)
-            # So se(ln(-ln(S(t)))) = sqrt(Σ di/(ni*(ni-di))) / |ln(S(t))|
-            # Let cum_gw = Σ di/(ni*(ni-di))
-            # Then:
+            # Delta-method standard error for log(-log(S)), using Greenwood's sum.
             se_lnln = math.sqrt(cum_var) / abs(ln_s)
             g = math.log(-ln_s)
             g_lo = g - z * se_lnln
@@ -215,6 +193,7 @@ def kaplan_meier(times: List[float], events: List[int]) -> Dict[str, Any]:
         "greenwood_var": gw_var,
         "ci_lower": ci_lo,
         "ci_hi": ci_hi,
+        "ci_upper": ci_hi,
         "n_subjects": n,
         "n_events": sum(events),
         "n_censored": n - sum(events),
@@ -275,6 +254,10 @@ def log_rank_test(
         p_value   : p-value (approximation using chi-square with 1 df)
         z_score   : z-score (signed)
     """
+    # Validate both groups, including sizes, event codes and finite times.
+    kaplan_meier(times1, events1)
+    kaplan_meier(times2, events2)
+
     # Combine and sort all unique event times
     all_times = sorted(set(
         [t for t, e in zip(times1, events1) if e == 1] +
@@ -333,7 +316,7 @@ def log_rank_test(
 
     return {
         "statistic": round(chi_sq, 4),
-        "p_value": round(p_value, 6),
+        "p_value": p_value,
         "z_score": round(z, 4),
     }
 
@@ -354,16 +337,18 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
 
     # Determine column names
     time_col = _find_col(fieldnames, ["time", "survival_time", "days", "months", "t"])
-    event_col = _find_col(fieldnames, ["event", "status", "dead", "censored", "e"])
-    group_col = _find_col(fieldnames, ["group", "treatment", "arm", "cohort"])
+    event_col = _find_col(fieldnames, ["event", "status", "dead", "e"])
+    group_col = _find_col(fieldnames, ["group", "treatment", "arm", "cohort"], required=False)
+    if not rows:
+        raise ValueError("CSV must contain at least one observation")
 
     times = [float(r[time_col]) for r in rows]
-    events = [int(float(r[event_col])) for r in rows]
+    events = [float(r[event_col]) for r in rows]
 
     result = kaplan_meier(times, events)
 
     # Build output
-    out_fields = fieldnames + [
+    out_fields = [
         "km_time", "km_survival", "km_at_risk", "km_deaths",
         "km_ci_lower", "km_ci_upper", "km_nelson_aalen",
         "km_median", "km_n_subjects", "km_n_events"
@@ -391,9 +376,9 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
         if len(groups) == 2:
             g1, g2 = sorted(groups)
             t1 = [float(r[time_col]) for r in rows if r[group_col] == g1]
-            e1 = [int(float(r[event_col])) for r in rows if r[group_col] == g1]
+            e1 = [float(r[event_col]) for r in rows if r[group_col] == g1]
             t2 = [float(r[time_col]) for r in rows if r[group_col] == g2]
-            e2 = [int(float(r[event_col])) for r in rows if r[group_col] == g2]
+            e2 = [float(r[event_col]) for r in rows if r[group_col] == g2]
             lr = log_rank_test(t1, e1, t2, e2)
             out_fields += ["logrank_statistic", "logrank_p_value", "logrank_z_score"]
             for row in out_rows:
@@ -413,14 +398,15 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _find_col(fieldnames: List[str], candidates: List[str]) -> str:
+def _find_col(fieldnames: List[str], candidates: List[str], required: bool = True) -> Optional[str]:
     """Find a column name from candidates (case-insensitive)."""
     lower_map = {c.lower(): c for c in fieldnames}
     for cand in candidates:
         if cand.lower() in lower_map:
             return lower_map[cand.lower()]
-    # Fallback to first column
-    return fieldnames[0]
+    if required:
+        raise ValueError(f"Missing required CSV column: expected one of {', '.join(candidates)}")
+    return None
 
 
 def _chi2_sf(x: float, df: int) -> float:
@@ -432,7 +418,7 @@ def _chi2_sf(x: float, df: int) -> float:
     if x <= 0:
         return 1.0
     if df == 1:
-        return 2.0 * (1.0 - _norm_cdf(math.sqrt(x)))
+        return math.erfc(math.sqrt(x / 2.0))
     elif df == 2:
         return math.exp(-x / 2.0)
     else:
