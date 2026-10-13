@@ -41,8 +41,8 @@
         <p class="hint" id="csv-help">Accepts UTF-8 CSV files. Maximum 20,000 observations / 2 MB. Do not enter patient identifiers.</p>
         <div class="controls">
           <button id="calculate" type="button" class="primary">Calculate survival</button>
-          <label class="file-button" for="upload">Import CSV</label>
-          <input id="upload" type="file" accept=".csv,text/csv" aria-label="Import CSV file">
+          <button type="button" id="import-button" class="secondary">Import CSV</button>
+          <input id="upload" type="file" accept=".csv,text/csv" aria-label="Select CSV file" tabindex="-1">
           <button id="export" type="button" disabled class="secondary">Export results</button>
         </div>
         <p class="status" id="status" role="status" aria-live="polite">Ready to calculate.</p>
