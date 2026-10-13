@@ -15,8 +15,8 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Kaplan Meier Estimator API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
-    version="3.0.0-ENTERPRISE",
+    description="Survival analysis API with legacy demonstration audit endpoints",
+    version="3.0.0",
 )
 
 
