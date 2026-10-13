@@ -1,0 +1,50 @@
+:root {color-scheme:light; --ink:#1b2a3c;--muted:#56677c;--accent:#2457b2;--border:#dfe6ed;--surface:#fff;--bg:#f4f7fa}
+* {box-sizing:border-box}
+body {margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+.layout {max-width:1400px;padding:28px 24px 48px;margin:auto}
+.top {display:flex;justify-content:space-between;gap:24px;align-items:center;margin-bottom:25px}
+.eyebrow {font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.13em;margin:0 0 6px}
+h1 {font-size:clamp(26px,3vw,36px);line-height:1.2;letter-spacing:-.03em;margin:0}
+.subtitle {font-size:15px;color:var(--muted);max-width:770px;margin:11px 0 0}
+.privacy {background:#e3f4e9;border:1px solid #b5d9c0;border-radius:30px;color:#27633f;font-size:12px;white-space:nowrap;font-weight:700;padding:8px 13px}
+.workspace {display:grid;grid-template-columns:minmax(330px,.85fr) minmax(0,1.3fr);gap:18px;align-items:start}
+.panel {background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:22px;box-shadow:0 2px 9px #152b4110}
+.panel h2 {font-size:18px;margin:0 0 16px;letter-spacing:-.015em}
+.panel-heading {display:flex;justify-content:space-between;align-items:center}
+.panel-heading h2 {margin:0}
+.hint {font-size:12.5px;color:var(--muted);margin:10px 0 16px}
+code {background:#eaf0f7;padding:2px 4px;border-radius:4px}
+.field-label {font-weight:700;display:block;font-size:13px;margin-bottom:8px}
+textarea {width:100%;padding:12px;border:1px solid #bccbdb;border-radius:9px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;line-height:1.55;font-size:13px;color:var(--ink);resize:vertical;min-height:208px}
+button,.file-button {font:inherit;cursor:pointer;border-radius:8px;padding:10px 15px;font-size:13px;font-weight:700;transition:background .15s}
+button:focus-visible,.file-button:focus-visible,textarea:focus-visible,input:focus-visible,a:focus-visible {outline:3px solid #ecb456;outline-offset:3px}
+.primary {border:1px solid var(--accent);color:white;background:var(--accent)}
+.primary:hover {background:#1b478f}
+.secondary,.file-button {border:1px solid #b9c8d9;background:white;color:var(--ink)}
+.secondary:hover,.file-button:hover,.subtle:hover {background:#eef4fb}
+button:disabled {opacity:.5;cursor:not-allowed}
+.subtle {border:0;background:transparent;color:var(--accent);padding:6px 3px}
+.controls {display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+#upload {position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden}
+.status {font-size:12.5px;color:var(--muted);margin:13px 0 0;min-height:20px}
+.status.ok {color:#27633f}.status.error {color:#ac3030;font-weight:600}
+.metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.metrics div {padding:12px;border-radius:10px;background:#f1f5f9}
+.metrics span {display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.03em}
+.metrics strong {font-size:23px;display:block;line-height:1.4;font-variant-numeric:tabular-nums}
+.chart-holder {margin-top:15px;overflow:hidden}
+#plot {display:block;width:100%;height:auto;min-height:230px}
+.legend {display:flex;gap:25px;flex-wrap:wrap;font-size:13px;font-weight:700;margin:0 6px 12px}
+.legend-mark {display:inline-block;width:17px;height:4px;vertical-align:middle;margin-right:5px}
+.comparison {background:#edf4fc;border-left:3px solid var(--accent);border-radius:4px;padding:11px 12px;font-size:13px;font-weight:650;margin:12px 0}
+.result-panel {margin-top:18px}
+.scroll-table {overflow-x:auto}
+table {border-collapse:collapse;text-align:left;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
+th {background:#f0f4f8;color:#48596d;font-size:12px;white-space:nowrap}
+th,td {padding:10px 12px;border-bottom:1px solid var(--border)}
+tbody tr:hover {background:#f8fbfe}
+footer {padding:18px 3px;font-size:12px;color:var(--muted);max-width:1000px}
+footer p {margin:7px 0}a {color:var(--accent)}
+@media(max-width:1000px) {.workspace {grid-template-columns:1fr}.visual-panel {order:2}}
+@media(max-width:570px) {.layout{padding:18px 11px}.panel{padding:15px}.top{align-items:flex-start;flex-direction:column;gap:12px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.controls button,.file-button{flex:1 1 auto;text-align:center}th,td{padding:9px 8px}}
+@media(prefers-reduced-motion:reduce) {button {transition:none}}
