@@ -6,6 +6,7 @@
   function readCSV(text) {
     if (typeof text !== "string" || !text.trim()) throw new Error("Provide a CSV dataset.");
     if (text.length > 2000000) throw new Error("CSV text is too large (2 MB maximum).");
+    if (text.length > 2000000) throw new Error("CSV text is too large (2 MB maximum).");
     const rows = [], current = [];
     let cell = "", quoted = false, ended = false;
     text = text.replace(/^\uFEFF/, "");
@@ -244,6 +245,7 @@
       }
     });
     document.getElementById("export").addEventListener("click",()=>{if(current)download(exportCSV(current));});
+    document.getElementById("import-button").addEventListener("click",()=>document.getElementById("upload").click());
     document.getElementById("import-button").addEventListener("click",()=>document.getElementById("upload").click());
     document.getElementById("upload").addEventListener("change",async e=>{
       const file=e.target.files[0];if(!file)return;
