@@ -244,79 +244,42 @@ def log_rank_test(
     times1: List[float], events1: List[int],
     times2: List[float], events2: List[int],
 ) -> Dict[str, float]:
-    """
-    Log-rank test comparing two survival curves.
-
-    Returns
-    -------
-    dict with keys:
-        statistic : chi-square test statistic
-        p_value   : p-value (approximation using chi-square with 1 df)
-        z_score   : z-score (signed)
-    """
-    # Validate both groups, including sizes, event codes and finite times.
+    """Two-sample log-rank test with pooled event-time hypergeometric variance."""
+    # Reuse the estimator's input validation before constructing risk sets.
     kaplan_meier(times1, events1)
     kaplan_meier(times2, events2)
 
-    # Combine and sort all unique event times
-    all_times = sorted(set(
-        [t for t, e in zip(times1, events1) if e == 1] +
-        [t for t, e in zip(times2, events2) if e == 1]
-    ))
+    # At each observed time: [events_group1, events_group2,
+    #                         censored_group1, censored_group2].
+    counts = {}
+    for group, times, events in ((0, times1, events1), (1, times2, events2)):
+        for t, event in zip(times, events):
+            b = counts.setdefault(t, [0, 0, 0, 0])
+            b[group if event == 1 else group + 2] += 1
 
-    if not all_times:
+    n1, n2 = len(times1), len(times2)
+    observed_minus_expected = 0.0
+    variance = 0.0
+
+    for t in sorted(counts):
+        d1, d2, c1, c2 = counts[t]
+        n = n1 + n2
+        d = d1 + d2
+        if d and n > 1:
+            observed_minus_expected += d1 - n1 * d / n
+            variance += n1 * n2 * d * (n - d) / (n * n * (n - 1))
+        # Events and censoring at t leave the risk sets after the test at t.
+        n1 -= d1 + c1
+        n2 -= d2 + c2
+
+    if variance == 0:
         return {"statistic": 0.0, "p_value": 1.0, "z_score": 0.0}
 
-    n1 = len(times1)
-    n2 = len(times2)
-
-    # Pre-sort
-    sorted1 = sorted(zip(times1, events1), key=lambda x: x[0])
-    sorted2 = sorted(zip(times2, events2), key=lambda x: x[0])
-    t1_list = [p[0] for p in sorted1]
-    e1_list = [p[1] for p in sorted1]
-    t2_list = [p[0] for p in sorted2]
-    e2_list = [p[1] for p in sorted2]
-
-    O_minus_E = 0.0
-    V = 0.0
-
-    for ti in all_times:
-        # At risk just before ti
-        n1i = sum(1 for t in t1_list if t >= ti)
-        n2i = sum(1 for t in t2_list if t >= ti)
-        ni = n1i + n2i
-
-        # Observed events at ti
-        d1i = sum(1 for t, e in zip(t1_list, e1_list) if t == ti and e == 1)
-        d2i = sum(1 for t, e in zip(t2_list, e2_list) if t == ti and e == 1)
-        di = d1i + d2i
-
-        if ni == 0 or ni == 1:
-            continue
-
-        # Expected events in group 1
-        e1i = n1i * di / ni if ni > 0 else 0
-
-        O_minus_E += (d1i - e1i)
-        # Variance: hypergeometric variance
-        # V = (n1i * n2i * di * (ni - di)) / (ni^2 * (ni - 1))
-        if ni > 1:
-            V += (n1i * n2i * di * (ni - di)) / (ni * ni * (ni - 1))
-
-    if V == 0:
-        return {"statistic": 0.0, "p_value": 1.0, "z_score": 0.0}
-
-    chi_sq = (O_minus_E ** 2) / V
-    z = O_minus_E / math.sqrt(V)
-
-    # p-value from chi-square with 1 df: P(X > chi_sq)
-    # Using survival function of chi-square(1) = 2 * (1 - Phi(sqrt(chi_sq)))
-    p_value = _chi2_sf(chi_sq, 1)
-
+    z = observed_minus_expected / math.sqrt(variance)
+    chi_sq = z * z
     return {
         "statistic": round(chi_sq, 4),
-        "p_value": p_value,
+        "p_value": _chi2_sf(chi_sq, 1),
         "z_score": round(z, 4),
     }
 
@@ -343,7 +306,7 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
         raise ValueError("CSV must contain at least one observation")
 
     times = [float(r[time_col]) for r in rows]
-    events = [float(r[event_col]) for r in rows]
+    events = [_parse_event(r[event_col]) for r in rows]
 
     result = kaplan_meier(times, events)
 
@@ -376,9 +339,9 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
         if len(groups) == 2:
             g1, g2 = sorted(groups)
             t1 = [float(r[time_col]) for r in rows if r[group_col] == g1]
-            e1 = [float(r[event_col]) for r in rows if r[group_col] == g1]
+            e1 = [_parse_event(r[event_col]) for r in rows if r[group_col] == g1]
             t2 = [float(r[time_col]) for r in rows if r[group_col] == g2]
-            e2 = [float(r[event_col]) for r in rows if r[group_col] == g2]
+            e2 = [_parse_event(r[event_col]) for r in rows if r[group_col] == g2]
             lr = log_rank_test(t1, e1, t2, e2)
             out_fields += ["logrank_statistic", "logrank_p_value", "logrank_z_score"]
             for row in out_rows:
@@ -397,6 +360,14 @@ def process_csv(input_path: str, output_path: str) -> List[Dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _parse_event(value: str) -> int:
+    """Require an unambiguous binary event code rather than truncating decimals."""
+    code = float(value)
+    if code not in (0, 1):
+        raise ValueError("CSV event indicators must be exactly 0 or 1")
+    return int(code)
+
 
 def _find_col(fieldnames: List[str], candidates: List[str], required: bool = True) -> Optional[str]:
     """Find a column name from candidates (case-insensitive)."""
