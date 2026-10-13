@@ -70,6 +70,8 @@ node --check web/app.js
 node --test web/test-app.cjs
 ~~~
 
+The legacy enrichment.py classes are threshold-based demonstration scaffolding, **not validated implementations** of Aalen–Johansen competing-risk estimation, Bayesian credible bands, landmark analysis, or survival extrapolation.
+
 The Node test runner (Node.js 18+) requires no npm packages. GitHub Actions checks Python versions 3.10, 3.11, and 3.12 and runs browser-algorithm regression tests. Front-end assets have no third-party runtime dependencies.
 
 ## License
