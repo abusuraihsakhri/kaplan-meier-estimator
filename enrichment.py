@@ -1,6 +1,8 @@
 """
 Enrichment Feature Implementation for kaplan-meier-estimator.
-Generated based on domain-specific requirements in specifications.
+These classes are generic threshold-checking demonstration scaffolds. They do not
+compute the named survival-analysis methods (including Aalen–Johansen,
+landmark analysis or Bayesian credible bands). Do not use for clinical inference.
 """
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional

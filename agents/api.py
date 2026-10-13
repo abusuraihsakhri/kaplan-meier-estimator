@@ -2,7 +2,10 @@
 FastAPI REST API Server for Kaplan Meier Estimator.
 """
 from typing import Dict, Any, List
+from pathlib import Path
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from kaplan_meier import kaplan_meier, log_rank_test
 from pydantic import BaseModel
 from .base import AuditLogger, PHIGuard
 from .models import SystemTaskPayload, ConsensusDossier
@@ -12,8 +15,8 @@ supervisor = SystemSupervisor(model_provider="mock")
 
 app = FastAPI(
     title="Kaplan Meier Estimator API",
-    description="Enterprise Distributed Component Platform (Clinical & Biomedical AI)",
-    version="3.0.0-ENTERPRISE",
+    description="Survival analysis API with legacy demonstration audit endpoints",
+    version="3.0.0",
 )
 
 
@@ -53,3 +56,39 @@ def api_chat(req: ChatRequest):
 @app.get("/api/audit/logs")
 def api_audit_logs():
     return {"audit_trail": AuditLogger.get_trail(), "verified": AuditLogger.verify_integrity()}
+
+
+class SurvivalRequest(BaseModel):
+    times: List[float]
+    events: List[int]
+
+
+class LogRankRequest(BaseModel):
+    times1: List[float]
+    events1: List[int]
+    times2: List[float]
+    events2: List[int]
+
+
+@app.post("/api/kaplan-meier")
+def api_kaplan_meier(request: SurvivalRequest):
+    """Compute product-limit survival estimates from numerical observations."""
+    try:
+        return kaplan_meier(request.times, request.events)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/api/log-rank")
+def api_log_rank(request: LogRankRequest):
+    """Compare two independent groups using the log-rank test."""
+    try:
+        return log_rank_test(request.times1, request.events1, request.times2, request.events2)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# Static front end is also served by FastAPI when running from a checkout or Docker.
+_web_dir = Path(__file__).resolve().parent.parent / "web"
+if _web_dir.is_dir():
+    app.mount("/", StaticFiles(directory=_web_dir, html=True), name="browser-app")
